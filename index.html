@@ -1,23 +1,27 @@
 <!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <link rel="icon" href="data:,"><title>סיור בבית הכנסת יוסף שלום</title>
-<style>html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:sans-serif;touch-action:none}#hud{position:fixed;top:8px;right:8px;color:#fff;background:#0008;padding:8px 12px;border-radius:8px;font-size:14px;pointer-events:none}#joy{position:fixed;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none}#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#fff8}#reset{position:fixed;bottom:16px;right:16px;z-index:5;font-size:15px;padding:8px 14px;border-radius:8px;border:0;background:#fffd;cursor:pointer}#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}</style>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:sans-serif;touch-action:none}#hud{position:fixed;top:8px;right:8px;color:#fff;background:#0008;padding:8px 12px;border-radius:8px;font-size:14px;pointer-events:none}#joy{position:fixed;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none}#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#fff8}#tp{position:fixed;bottom:16px;right:16px;z-index:5;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:70vw}#tp button{font-size:15px;padding:8px 14px;border-radius:8px;border:0;background:#fffd;cursor:pointer}#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}</style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script></head><body>
-<button id="reset">חזרה לכניסה</button>
+<div id="tp"><button data-s="hall">אולם מרכזי</button><button data-s="women">עזרת נשים</button><button data-s="out">בחוץ</button><button id="reset">חזרה לכניסה</button></div>
 <div id="load">טוען… <span id="pct"></span></div>
-<div id="hud">גרירה: הסתכלות · WASD/חצים: הליכה · גלגלת: קדימה/אחורה · R: חזרה לכניסה<br>במובייל: ג'ויסטיק משמאל, גרירה להסתכלות</div>
+<div id="hud">גרירה: הסתכלות · WASD/חצים: הליכה · גלגלת: קדימה/אחורה · R: חזרה לכניסה<br>מעבר לעזרת נשים: מעבר בקצה הצפון-מזרחי של המחיצה, או בכפתור · יציאה: דלת היציאה השנייה<br><small>חיפוי אבן ירושלמית בקיר ארון הקודש – להמחשה</small><br>במובייל: ג'ויסטיק משמאל, גרירה להסתכלות</div>
 <div id="joy"><div id="knob"></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
-const T0=performance.now();const EYE=1.6,R=0.25,SPEED=2.2,GLB_BYTES=3742712;
+const T0=performance.now();const EYE=1.6,R=0.18,SPEED=2.2,GLB_BYTES=5403436;
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);
-renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.shadowMap.enabled=false;document.body.appendChild(renderer.domElement);
+renderer.toneMapping=THREE.AgXToneMapping;renderer.toneMappingExposure=Math.pow(2,0.2);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=false;document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xbfd4e6);
 scene.add(new THREE.HemisphereLight(0xffffff,0x887766,2.0));const sun=new THREE.DirectionalLight(0xfff2dd,1.5);sun.position.set(-5,10,4);scene.add(sun);scene.add(new THREE.AmbientLight(0xffffff,0.4));
 const cam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,500);cam.rotation.order='YXZ';
 // spawn: precomputed offline (hall floor near north entrance, facing the Aron Kodesh)
-const SP={x:15.0,y:0.0,z:-14.0},SPY=Math.atan2(-(12.4-15.0),-(-5.0+14.0));
+const look=(p,tx,tz)=>Math.atan2(-(tx-p.x),-(tz-p.z));
+const SPOTS={hall:{x:15.15,y:0.0,z:-14.15},women:{x:23.95,y:0.0,z:-11.75},out:{x:20.95,y:-0.43,z:3.85}};
+SPOTS.hall.yaw=look(SPOTS.hall,12.4,-5.0);SPOTS.women.yaw=look(SPOTS.women,16.9,-8.8);SPOTS.out.yaw=look(SPOTS.out,21.05,-0.1);
+const SP=SPOTS.hall,SPY=SP.yaw;
+function goTo(k){const p=SPOTS[k];cam.position.set(p.x,p.y+EYE,p.z);yaw=p.yaw;pitch=0}
 let yaw=SPY,pitch=0;cam.position.set(SP.x,SP.y+EYE,SP.z);
 function goSpawn(){cam.position.set(SP.x,SP.y+EYE,SP.z);yaw=SPY;pitch=0}
 // nav grid (precomputed offline from raw model: wall/furniture cross-sections 0.35-1.85m, floor heightmap)
@@ -27,19 +31,21 @@ function cellBlk(x,z){const i=Math.floor((x-NAV.x0)/NAV.s),j=Math.floor((z-NAV.z
 function floorH(x,z){const i=Math.floor((x-NAV.x0)/NAV.fs),j=Math.floor((z-NAV.z0)/NAV.fs);if(i<0||j<0||i>=NAV.fx||j>=NAV.fz)return null;return NAV.h[j*NAV.fx+i]}
 const OFF=[[0,0]];for(let a=0;a<12;a++)OFF.push([Math.cos(a*Math.PI/6)*R,Math.sin(a*Math.PI/6)*R]);for(let a=0;a<6;a++)OFF.push([Math.cos(a*Math.PI/3)*R*.5,Math.sin(a*Math.PI/3)*R*.5]);
 function free(x,z){for(const [dx,dz] of OFF)if(cellBlk(x+dx,z+dz))return false;return true}
-function canGo(x,z){if(!free(x,z))return false;const f=floorH(x,z),c=floorH(cam.position.x,cam.position.z);return f===null||c===null||f-c<0.45}
+function canGo(x,z){if(!free(x,z))return false;const f=floorH(x,z),c=floorH(cam.position.x,cam.position.z);if(f!==null&&f<-8)return false;return f===null||c===null||f-c<0.45}
 let stuckT=0;
 function tryMove(dx,dz,dt){const p=cam.position;
   if(!free(p.x,p.z)){p.x+=dx;p.z+=dz;stuckT+=dt;if(stuckT>2){goSpawn();stuckT=0}return}stuckT=0;
   if(canGo(p.x+dx,p.z+dz)){p.x+=dx;p.z+=dz}else if(canGo(p.x+dx,p.z))p.x+=dx;else if(canGo(p.x,p.z+dz))p.z+=dz}
-function ground(){const f=floorH(cam.position.x,cam.position.z);if(f!==null)cam.position.y+=(f+EYE-cam.position.y)*0.3}
+function ground(){const f=floorH(cam.position.x,cam.position.z);if(f!==null&&f>-8)cam.position.y+=(f+EYE-cam.position.y)*0.3}
 // load
+const LM=new THREE.TextureLoader().load('lightmap.webp',t=>{LMC.forEach(x=>{x.image=t.image;x.needsUpdate=true})});LM.flipY=false;LM.channel=1;LM.colorSpace=THREE.SRGBColorSpace;const LMC=[0,1,2,3].map(c=>{const t=LM.clone();t.channel=c;return t});const LM_INT=5.8107*Math.PI;
 const dl=new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/');
 let ready=false;
 new GLTFLoader().setDRACOLoader(dl).load('synagogue.glb',async g=>{
   const tl=performance.now();
   g.scene.traverse(o=>{if(o.isLight)o.visible=false;if(o.isMesh){o.castShadow=o.receiveShadow=false;const ms=Array.isArray(o.material)?o.material:[o.material];
-    o.material=ms.map(m=>{if(m.isMeshPhysicalMaterial&&(m.transmission>0||m.clearcoat>0||m.sheen>0)){const n=new THREE.MeshStandardMaterial({color:m.color,map:m.map,roughness:m.roughness,metalness:m.metalness,normalMap:m.normalMap,emissive:m.emissive,emissiveMap:m.emissiveMap,emissiveIntensity:m.emissiveIntensity,side:m.side});
+    const bk=!!(o.userData.baked||(o.parent&&o.parent.userData.baked))&&!!(o.geometry.attributes.uv1||o.geometry.attributes.uv);const ga=o.geometry.attributes,lmT=LMC[ga.uv3?3:ga.uv2?2:ga.uv1?1:0];
+    o.material=ms.map(m=>{const em=m.emissive&&(m.emissive.r+m.emissive.g+m.emissive.b)*(m.emissiveIntensity||1)>0.05;if(bk&&!em&&!(m.transmission>0)&&m.opacity>0.99){const b=new THREE.MeshBasicMaterial({map:m.map,color:m.color,lightMap:lmT,lightMapIntensity:LM_INT,side:m.side,alphaMap:m.alphaMap,transparent:m.transparent,alphaTest:m.alphaTest});return b}if(m.name==='baked'){const t=m.emissiveMap||m.map;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return new THREE.MeshBasicMaterial({map:t})}if(m.isMeshPhysicalMaterial&&(m.transmission>0||m.clearcoat>0||m.sheen>0)){const n=new THREE.MeshStandardMaterial({color:m.color,map:m.map,roughness:m.roughness,metalness:m.metalness,normalMap:m.normalMap,emissive:m.emissive,emissiveMap:m.emissiveMap,emissiveIntensity:m.emissiveIntensity,side:m.side});
       if(m.transmission>0){n.transparent=true;n.opacity=0.3;n.depthWrite=false;n.roughness=0.05}else{n.transparent=m.transparent;n.opacity=m.opacity}return n}return m});
     if(o.material.length===1)o.material=o.material[0]}});
   g.scene.updateMatrixWorld(true);g.scene.traverse(o=>{o.matrixAutoUpdate=false});
@@ -54,7 +60,7 @@ el.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&e.clientX<inne
 el.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;yaw-=(e.clientX-drag.x)*0.004;pitch-=(e.clientY-drag.y)*0.004;pitch=Math.max(-1.4,Math.min(1.4,pitch));drag.x=e.clientX;drag.y=e.clientY});
 el.addEventListener('pointerup',e=>{if(drag&&drag.id===e.pointerId)drag=null});
 const keys={};addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyR')goSpawn()});addEventListener('keyup',e=>keys[e.code]=false);
-document.getElementById('reset').addEventListener('click',goSpawn);
+document.getElementById('reset').addEventListener('click',goSpawn);document.querySelectorAll('#tp button[data-s]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.s)));window.goTo=goTo;window.setPose=(x,y,z,tx,ty,tz)=>{cam.position.set(x,y,z);yaw=Math.atan2(-(tx-x),-(tz-z));pitch=Math.atan2(ty-y,Math.hypot(tx-x,tz-z))};
 let wheel=0;addEventListener('wheel',e=>{wheel+=-Math.sign(e.deltaY)*0.5;e.preventDefault()},{passive:false});
 const joy=document.getElementById('joy'),knob=document.getElementById('knob');let joyOn=matchMedia('(pointer:coarse)').matches,jv={x:0,y:0},jid=null;
 if(joyOn)joy.style.display='block';
