@@ -1,0 +1,58 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>סיור בבית הכנסת יוסף שלום</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:sans-serif;touch-action:none}#hud{position:fixed;top:8px;right:8px;color:#fff;background:#0008;padding:8px 12px;border-radius:8px;font-size:14px;pointer-events:none}#joy{position:fixed;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none}#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#fff8}#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script></head><body>
+<div id="load">טוען… <span id="pct"></span></div>
+<div id="hud">גרירה: הסתכלות · WASD/חצים: הליכה · גלגלת: קדימה/אחורה<br>במובייל: ג'ויסטיק משמאל, גרירה להסתכלות</div>
+<div id="joy"><div id="knob"></div></div>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+const EYE=1.6,R=0.3,SPEED=2.2;
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xbfd4e6);
+scene.environment=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff,0x887766,1.2));const sun=new THREE.DirectionalLight(0xfff2dd,1.5);sun.position.set(-5,10,4);scene.add(sun);
+const cam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,500);cam.rotation.order='YXZ';
+let yaw=0,pitch=0;const meshes=[];const ray=new THREE.Raycaster();
+const dl=new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/');
+new GLTFLoader().setDRACOLoader(dl).load('synagogue.glb',g=>{
+  scene.add(g.scene);g.scene.traverse(o=>{if(o.isMesh){meshes.push(o);const m=o.material;if(m&&m.transparent)o.userData.glass=true;}});
+  const b=new THREE.Box3().setFromObject(g.scene),c=b.getCenter(new THREE.Vector3());
+  ray.set(new THREE.Vector3(c.x,b.max.y+1,c.z),new THREE.Vector3(0,-1,0));ray.far=1e4;
+  const hits=ray.intersectObjects(meshes).filter(h=>h.point.y>b.min.y+0.02);
+  const fy=hits.length?hits[hits.length-1].point.y:b.min.y;
+  cam.position.set(c.x,fy+EYE,c.z);document.getElementById('load').remove();
+},e=>{if(e.total)document.getElementById('pct').textContent=Math.round(e.loaded/e.total*100)+'%'});
+// look
+let drag=null;const el=renderer.domElement;
+el.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&e.clientX<innerWidth/2&&joyOn)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId)});
+el.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;yaw-= (e.clientX-drag.x)*0.004;pitch-=(e.clientY-drag.y)*0.004;pitch=Math.max(-1.4,Math.min(1.4,pitch));drag.x=e.clientX;drag.y=e.clientY});
+el.addEventListener('pointerup',e=>{if(drag&&drag.id===e.pointerId)drag=null});
+// keys & wheel
+const keys={};addEventListener('keydown',e=>keys[e.code]=true);addEventListener('keyup',e=>keys[e.code]=false);
+let wheel=0;addEventListener('wheel',e=>{wheel+=-Math.sign(e.deltaY)*0.5;e.preventDefault()},{passive:false});
+// joystick
+const joy=document.getElementById('joy'),knob=document.getElementById('knob');let joyOn=matchMedia('(pointer:coarse)').matches,jv={x:0,y:0},jid=null;
+if(joyOn)joy.style.display='block';
+joy.addEventListener('pointerdown',e=>{jid=e.pointerId;joy.setPointerCapture(jid);jmove(e)});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===jid)jmove(e)});
+joy.addEventListener('pointerup',e=>{jid=null;jv={x:0,y:0};knob.style.left=knob.style.top='35px'});
+function jmove(e){const r=joy.getBoundingClientRect();let x=(e.clientX-r.left-60)/50,y=(e.clientY-r.top-60)/50;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}jv={x,y};knob.style.left=35+x*50+'px';knob.style.top=35+y*50+'px'}
+// collision
+const tmp=new THREE.Vector3();
+function blocked(dir,dist){for(const h of [-0.9,-0.4,0.2]){ray.set(tmp.copy(cam.position).add(new THREE.Vector3(0,h,0)),dir);ray.far=dist+R;const hit=ray.intersectObjects(meshes,false)[0];if(hit)return true}return false}
+function tryMove(v){const d=v.length();if(d<1e-6)return;for(const ax of [v.clone(),new THREE.Vector3(v.x,0,0),new THREE.Vector3(0,0,v.z)]){const l=ax.length();if(l<1e-6)continue;if(!blocked(ax.clone().normalize(),l)){cam.position.add(ax);return}}}
+function ground(){ray.set(tmp.copy(cam.position).add(new THREE.Vector3(0,-1.0,0)),new THREE.Vector3(0,-1,0));ray.far=3;const h=ray.intersectObjects(meshes,false)[0];if(h){const t=h.point.y+EYE;cam.position.y+= (t-cam.position.y)*0.3}}
+const clock=new THREE.Clock();
+renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),0.05);cam.rotation.set(pitch,yaw,0);
+  let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-jv.y,s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+jv.x;
+  const fw=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),rt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+  const v=fw.multiplyScalar(f*SPEED*dt).add(rt.multiplyScalar(s*SPEED*dt));
+  if(wheel){const w=Math.sign(wheel)*Math.min(Math.abs(wheel),4*dt);wheel-=w;v.add(new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)).multiplyScalar(w))}
+  if(meshes.length){tryMove(v);ground()}renderer.render(scene,cam)});
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script></body></html>
