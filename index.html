@@ -1,63 +1,75 @@
 <!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>סיור בבית הכנסת יוסף שלום</title>
+<link rel="icon" href="data:,"><title>סיור בבית הכנסת יוסף שלום</title>
 <style>html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:sans-serif;touch-action:none}#hud{position:fixed;top:8px;right:8px;color:#fff;background:#0008;padding:8px 12px;border-radius:8px;font-size:14px;pointer-events:none}#joy{position:fixed;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none}#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#fff8}#reset{position:fixed;bottom:16px;right:16px;z-index:5;font-size:15px;padding:8px 14px;border-radius:8px;border:0;background:#fffd;cursor:pointer}#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}</style>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three-mesh-bvh":"https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script></head><body>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script></head><body>
+<button id="reset">חזרה לכניסה</button>
 <div id="load">טוען… <span id="pct"></span></div>
 <div id="hud">גרירה: הסתכלות · WASD/חצים: הליכה · גלגלת: קדימה/אחורה · R: חזרה לכניסה<br>במובייל: ג'ויסטיק משמאל, גרירה להסתכלות</div>
-<button id="reset">חזרה לכניסה</button>
 <div id="joy"><div id="knob"></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
-import {computeBoundsTree,disposeBoundsTree,acceleratedRaycast} from 'three-mesh-bvh';
-THREE.BufferGeometry.prototype.computeBoundsTree=computeBoundsTree;THREE.BufferGeometry.prototype.disposeBoundsTree=disposeBoundsTree;THREE.Mesh.prototype.raycast=acceleratedRaycast;
-import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-const EYE=1.6,R=0.3,SPEED=2.2;
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
-renderer.toneMapping=THREE.ACESFilmicToneMapping;document.body.appendChild(renderer.domElement);
+const T0=performance.now();const EYE=1.6,R=0.25,SPEED=2.2,GLB_BYTES=3742712;
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.shadowMap.enabled=false;document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xbfd4e6);
-scene.environment=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),0.04).texture;
-scene.add(new THREE.HemisphereLight(0xffffff,0x887766,1.2));const sun=new THREE.DirectionalLight(0xfff2dd,1.5);sun.position.set(-5,10,4);scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xffffff,0x887766,2.0));const sun=new THREE.DirectionalLight(0xfff2dd,1.5);sun.position.set(-5,10,4);scene.add(sun);scene.add(new THREE.AmbientLight(0xffffff,0.4));
 const cam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.05,500);cam.rotation.order='YXZ';
-let yaw=0,pitch=0;const meshes=[];const ray=new THREE.Raycaster();ray.firstHitOnly=true;
-const dl=new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/');
-new GLTFLoader().setDRACOLoader(dl).load('synagogue.glb',g=>{
-  scene.add(g.scene);g.scene.traverse(o=>{if(o.isMesh){meshes.push(o);const m=o.material;if(m&&m.transparent)o.userData.glass=true;}});
-  g.scene.traverse(o=>{if(o.isMesh)o.geometry.computeBoundsTree()});goSpawn();document.getElementById('load').remove();
-},e=>{if(e.total)document.getElementById('pct').textContent=Math.round(e.loaded/e.total*100)+'%'});
-// spawn (precomputed offline from raw.glb: hall floor y=0 near north entrance, 0.88m clearance, facing ark)
-const SP=new THREE.Vector3(15.0,0.0,-14.0),SPY=Math.atan2(-(12.4-15.0),-(-5.0+14.0));const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+// spawn: precomputed offline (hall floor near north entrance, facing the Aron Kodesh)
+const SP={x:15.0,y:0.0,z:-14.0},SPY=Math.atan2(-(12.4-15.0),-(-5.0+14.0));
+let yaw=SPY,pitch=0;cam.position.set(SP.x,SP.y+EYE,SP.z);
 function goSpawn(){cam.position.set(SP.x,SP.y+EYE,SP.z);yaw=SPY;pitch=0}
-function stuck(){let n=0,back=0;for(let i=0;i<8;i++){const a=i/8*Math.PI*2;ray.set(V(cam.position.x,cam.position.y-0.6,cam.position.z),V(Math.cos(a),0,Math.sin(a)));ray.far=0.3;const h=ray.intersectObjects(meshes,false)[0];if(h){n++;if(h.face&&h.face.normal.clone().transformDirection(h.object.matrixWorld).dot(ray.ray.direction)>0)back++}}return n>=6||back>=3}
-let stuckT=0,stuckC=0,isStuck=false;addEventListener('keydown',e=>{if(e.code==='KeyR')goSpawn()});
-document.getElementById('reset').addEventListener('click',()=>{goSpawn()});
+// nav grid (precomputed offline from raw model: wall/furniture cross-sections 0.35-1.85m, floor heightmap)
+let NAV=null,BLK=null;
+fetch('nav.json').then(r=>r.json()).then(n=>{NAV=n;const h=n.blk,b=new Uint8Array(h.length/2);for(let i=0;i<b.length;i++)b[i]=parseInt(h.substr(i*2,2),16);BLK=b});
+function cellBlk(x,z){const i=Math.floor((x-NAV.x0)/NAV.s),j=Math.floor((z-NAV.z0)/NAV.s);if(i<0||j<0||i>=NAV.nx||j>=NAV.nz)return false;const k=j*NAV.nx+i;return (BLK[k>>3]>>(7-(k&7)))&1}
+function floorH(x,z){const i=Math.floor((x-NAV.x0)/NAV.fs),j=Math.floor((z-NAV.z0)/NAV.fs);if(i<0||j<0||i>=NAV.fx||j>=NAV.fz)return null;return NAV.h[j*NAV.fx+i]}
+const OFF=[[0,0]];for(let a=0;a<12;a++)OFF.push([Math.cos(a*Math.PI/6)*R,Math.sin(a*Math.PI/6)*R]);for(let a=0;a<6;a++)OFF.push([Math.cos(a*Math.PI/3)*R*.5,Math.sin(a*Math.PI/3)*R*.5]);
+function free(x,z){for(const [dx,dz] of OFF)if(cellBlk(x+dx,z+dz))return false;return true}
+function canGo(x,z){if(!free(x,z))return false;const f=floorH(x,z),c=floorH(cam.position.x,cam.position.z);return f===null||c===null||f-c<0.45}
+let stuckT=0;
+function tryMove(dx,dz,dt){const p=cam.position;
+  if(!free(p.x,p.z)){p.x+=dx;p.z+=dz;stuckT+=dt;if(stuckT>2){goSpawn();stuckT=0}return}stuckT=0;
+  if(canGo(p.x+dx,p.z+dz)){p.x+=dx;p.z+=dz}else if(canGo(p.x+dx,p.z))p.x+=dx;else if(canGo(p.x,p.z+dz))p.z+=dz}
+function ground(){const f=floorH(cam.position.x,cam.position.z);if(f!==null)cam.position.y+=(f+EYE-cam.position.y)*0.3}
+// load
+const dl=new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/');
+let ready=false;
+new GLTFLoader().setDRACOLoader(dl).load('synagogue.glb',async g=>{
+  const tl=performance.now();
+  g.scene.traverse(o=>{if(o.isLight)o.visible=false;if(o.isMesh){o.castShadow=o.receiveShadow=false;const ms=Array.isArray(o.material)?o.material:[o.material];
+    o.material=ms.map(m=>{if(m.isMeshPhysicalMaterial&&(m.transmission>0||m.clearcoat>0||m.sheen>0)){const n=new THREE.MeshStandardMaterial({color:m.color,map:m.map,roughness:m.roughness,metalness:m.metalness,normalMap:m.normalMap,emissive:m.emissive,emissiveMap:m.emissiveMap,emissiveIntensity:m.emissiveIntensity,side:m.side});
+      if(m.transmission>0){n.transparent=true;n.opacity=0.3;n.depthWrite=false;n.roughness=0.05}else{n.transparent=m.transparent;n.opacity=m.opacity}return n}return m});
+    if(o.material.length===1)o.material=o.material[0]}});
+  g.scene.updateMatrixWorld(true);g.scene.traverse(o=>{o.matrixAutoUpdate=false});
+  scene.add(g.scene);
+  try{await renderer.compileAsync(scene,cam)}catch(e){}
+  ready=true;document.getElementById('load').remove();
+  renderer.render(scene,cam);window.__info=JSON.stringify(renderer.info.render)+' prog '+renderer.info.programs.length+' tex '+renderer.info.memory.textures;console.log('[perf]',window.__info);console.log('[perf] glb parsed at',Math.round(tl-T0),'ms; interactive at',Math.round(performance.now()-T0),'ms');
+},e=>{document.getElementById('pct').textContent=Math.min(99,Math.round(e.loaded/GLB_BYTES*100))+'%'});
 // look
 let drag=null;const el=renderer.domElement;
 el.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&e.clientX<innerWidth/2&&joyOn)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId)});
-el.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;yaw-= (e.clientX-drag.x)*0.004;pitch-=(e.clientY-drag.y)*0.004;pitch=Math.max(-1.4,Math.min(1.4,pitch));drag.x=e.clientX;drag.y=e.clientY});
+el.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;yaw-=(e.clientX-drag.x)*0.004;pitch-=(e.clientY-drag.y)*0.004;pitch=Math.max(-1.4,Math.min(1.4,pitch));drag.x=e.clientX;drag.y=e.clientY});
 el.addEventListener('pointerup',e=>{if(drag&&drag.id===e.pointerId)drag=null});
-// keys & wheel
-const keys={};addEventListener('keydown',e=>keys[e.code]=true);addEventListener('keyup',e=>keys[e.code]=false);
+const keys={};addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyR')goSpawn()});addEventListener('keyup',e=>keys[e.code]=false);
+document.getElementById('reset').addEventListener('click',goSpawn);
 let wheel=0;addEventListener('wheel',e=>{wheel+=-Math.sign(e.deltaY)*0.5;e.preventDefault()},{passive:false});
-// joystick
 const joy=document.getElementById('joy'),knob=document.getElementById('knob');let joyOn=matchMedia('(pointer:coarse)').matches,jv={x:0,y:0},jid=null;
 if(joyOn)joy.style.display='block';
 joy.addEventListener('pointerdown',e=>{jid=e.pointerId;joy.setPointerCapture(jid);jmove(e)});
 joy.addEventListener('pointermove',e=>{if(e.pointerId===jid)jmove(e)});
 joy.addEventListener('pointerup',e=>{jid=null;jv={x:0,y:0};knob.style.left=knob.style.top='35px'});
 function jmove(e){const r=joy.getBoundingClientRect();let x=(e.clientX-r.left-60)/50,y=(e.clientY-r.top-60)/50;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}jv={x,y};knob.style.left=35+x*50+'px';knob.style.top=35+y*50+'px'}
-// collision
-const tmp=new THREE.Vector3();
-function blocked(dir,dist){for(const h of [-0.9,-0.4,0.2]){ray.set(tmp.copy(cam.position).add(new THREE.Vector3(0,h,0)),dir);ray.far=dist+R;const hit=ray.intersectObjects(meshes,false)[0];if(hit)return true}return false}
-function tryMove(v){const d=v.length();if(d<1e-6)return;for(const ax of [v.clone(),new THREE.Vector3(v.x,0,0),new THREE.Vector3(0,0,v.z)]){const l=ax.length();if(l<1e-6)continue;if(!blocked(ax.clone().normalize(),l)){cam.position.add(ax);return}}}
-function ground(){ray.set(tmp.copy(cam.position).add(new THREE.Vector3(0,-1.0,0)),new THREE.Vector3(0,-1,0));ray.far=3;const h=ray.intersectObjects(meshes,false)[0];if(h){const t=h.point.y+EYE;cam.position.y+= (t-cam.position.y)*0.3}}
-const clock=new THREE.Clock();
+// loop
+const clock=new THREE.Clock();window.__ft=[];
 renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),0.05);cam.rotation.set(pitch,yaw,0);
   let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-jv.y,s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+jv.x;
-  const fw=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),rt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
-  const v=fw.multiplyScalar(f*SPEED*dt).add(rt.multiplyScalar(s*SPEED*dt));
-  if(wheel){const w=Math.sign(wheel)*Math.min(Math.abs(wheel),4*dt);wheel-=w;v.add(new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)).multiplyScalar(w))}
-  if(meshes.length){stuckC+=dt;if(stuckC>0.5){stuckC=0;isStuck=stuck()}if(isStuck){stuckT+=dt;cam.position.add(v);if(stuckT>1.5){goSpawn();stuckT=0}}else{stuckT=0;tryMove(v)}ground()}renderer.render(scene,cam)});
+  let w=0;if(wheel){w=Math.sign(wheel)*Math.min(Math.abs(wheel),4*dt);wheel-=w}
+  const fwd=f*SPEED*dt+w,side=s*SPEED*dt;
+  const dx=-Math.sin(yaw)*fwd+Math.cos(yaw)*side,dz=-Math.cos(yaw)*fwd-Math.sin(yaw)*side;
+  if(NAV&&BLK){if(dx||dz)tryMove(dx,dz,dt);ground()}
+  if(ready){const t=performance.now();renderer.render(scene,cam);window.__ft.push(t);if(window.__ft.length>600)window.__ft.shift()}});
 addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script></body></html>
