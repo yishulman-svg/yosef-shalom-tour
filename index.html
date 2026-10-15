@@ -1,9 +1,10 @@
 <!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>סיור בבית הכנסת יוסף שלום</title>
-<style>html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:sans-serif;touch-action:none}#hud{position:fixed;top:8px;right:8px;color:#fff;background:#0008;padding:8px 12px;border-radius:8px;font-size:14px;pointer-events:none}#joy{position:fixed;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none}#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#fff8}#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}</style>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:sans-serif;touch-action:none}#hud{position:fixed;top:8px;right:8px;color:#fff;background:#0008;padding:8px 12px;border-radius:8px;font-size:14px;pointer-events:none}#joy{position:fixed;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none}#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#fff8}#reset{position:fixed;bottom:16px;right:16px;z-index:5;font-size:15px;padding:8px 14px;border-radius:8px;border:0;background:#fffd;cursor:pointer}#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}</style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script></head><body>
 <div id="load">טוען… <span id="pct"></span></div>
-<div id="hud">גרירה: הסתכלות · WASD/חצים: הליכה · גלגלת: קדימה/אחורה<br>במובייל: ג'ויסטיק משמאל, גרירה להסתכלות</div>
+<div id="hud">גרירה: הסתכלות · WASD/חצים: הליכה · גלגלת: קדימה/אחורה · R: חזרה לכניסה<br>במובייל: ג'ויסטיק משמאל, גרירה להסתכלות</div>
+<button id="reset">חזרה לכניסה</button>
 <div id="joy"><div id="knob"></div></div>
 <script type="module">
 import * as THREE from 'three';
@@ -21,12 +22,35 @@ let yaw=0,pitch=0;const meshes=[];const ray=new THREE.Raycaster();
 const dl=new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/');
 new GLTFLoader().setDRACOLoader(dl).load('synagogue.glb',g=>{
   scene.add(g.scene);g.scene.traverse(o=>{if(o.isMesh){meshes.push(o);const m=o.material;if(m&&m.transparent)o.userData.glass=true;}});
-  const b=new THREE.Box3().setFromObject(g.scene),c=b.getCenter(new THREE.Vector3());
-  ray.set(new THREE.Vector3(c.x,b.max.y+1,c.z),new THREE.Vector3(0,-1,0));ray.far=1e4;
-  const hits=ray.intersectObjects(meshes).filter(h=>h.point.y>b.min.y+0.02);
-  const fy=hits.length?hits[hits.length-1].point.y:b.min.y;
-  cam.position.set(c.x,fy+EYE,c.z);document.getElementById('load').remove();
+  scene.updateMatrixWorld(true);computeSpawn(g.scene);goSpawn();document.getElementById('load').remove();
 },e=>{if(e.total)document.getElementById('pct').textContent=Math.round(e.loaded/e.total*100)+'%'});
+// spawn
+let SP=null,SPY=0;const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+function find(root,re){let o=null;root.traverse(n=>{if(!o&&re.test(n.name||''))o=n});return o}
+function clearance(p,maxd){let m=maxd;for(const h of [0.4,1.0,1.5])for(let i=0;i<16;i++){const a=i/16*Math.PI*2;ray.set(V(p.x,p.y+h,p.z),V(Math.cos(a),0,Math.sin(a)));ray.far=maxd;const x=ray.intersectObjects(meshes,false)[0];if(x)m=Math.min(m,x.distance)}return m}
+function floorAt(x,z,top){ray.set(V(x,top,z),V(0,-1,0));ray.far=1e4;const hs=ray.intersectObjects(meshes,false);
+  // first hit below 2.4m above the lowest floor-ish surface: walk hits top-down, take first one whose up-normal is horizontal surface with >=2.2m free above
+  for(let i=0;i<hs.length;i++){const h=hs[i];const n=h.face?h.face.normal.clone().transformDirection(h.object.matrixWorld):V(0,1,0);if(n.y<0.7)continue;const above=i>0?hs[i-1].point.y-h.point.y:99;if(above>=2.2)return {y:h.point.y,name:h.object.name||''}}return null}
+function computeSpawn(root){
+  const ark=find(root,/Aron Kodesh|^NEW Ark/i),ent=find(root,/Entrance target/i);
+  const ab=ark?new THREE.Box3().setFromObject(ark):null;const A=ab?ab.getCenter(V()):V(12.5,0,-4.5);
+  const E=ent?ent.getWorldPosition(V()):V(6.9,0,-11.95);
+  const fl=[];root.traverse(o=>{if(o.isMesh&&/porcelain floor/i.test((o.name||'')+(o.parent&&o.parent.name||'')))fl.push(o)});
+  const fb=new THREE.Box3();fl.length?fl.forEach(o=>fb.expandByObject(o)):fb.setFromObject(root);
+  const top=new THREE.Box3().setFromObject(root).max.y+1;let best=null;
+  for(let x=fb.min.x+0.3;x<fb.max.x;x+=0.5)for(let z=fb.min.z+0.3;z<fb.max.z;z+=0.5){
+    if(ab&&ab.clone().expandByScalar(1.5).containsPoint(V(x,ab.min.y+0.1,z)))continue;
+    const f=floorAt(x,z,top);if(!f||(fl.length&&f.y>fb.max.y+0.6))continue;const p=V(x,f.y,z);
+    const c=clearance(p,1.2);if(c<0.6)continue;
+    const sc=-Math.hypot(x-E.x,z-E.z)+0.4*Math.hypot(x-A.x,z-A.z)+0.5*Math.min(c,1.2);
+    if(!best||sc>best.s)best={s:sc,p}}
+  if(best){SP=best.p;}else{SP=V(E.x,fb.min.y,E.z);}SPY=Math.atan2(-(A.x-SP.x),-(A.z-SP.z));
+  console.log('spawn',SP,'ark',A,'entrance',E);
+}
+function goSpawn(){cam.position.set(SP.x,SP.y+EYE,SP.z);yaw=SPY;pitch=0}
+function stuck(){let n=0,back=0;for(let i=0;i<8;i++){const a=i/8*Math.PI*2;ray.set(V(cam.position.x,cam.position.y-0.6,cam.position.z),V(Math.cos(a),0,Math.sin(a)));ray.far=0.3;const h=ray.intersectObjects(meshes,false)[0];if(h){n++;if(h.face&&h.face.normal.clone().transformDirection(h.object.matrixWorld).dot(ray.ray.direction)>0)back++}}return n>=6||back>=3}
+let stuckT=0;addEventListener('keydown',e=>{if(e.code==='KeyR'&&SP)goSpawn()});
+document.getElementById('reset').addEventListener('click',()=>{if(SP)goSpawn()});
 // look
 let drag=null;const el=renderer.domElement;
 el.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&e.clientX<innerWidth/2&&joyOn)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId)});
@@ -53,6 +77,6 @@ renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),0.05);cam.rota
   const fw=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),rt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
   const v=fw.multiplyScalar(f*SPEED*dt).add(rt.multiplyScalar(s*SPEED*dt));
   if(wheel){const w=Math.sign(wheel)*Math.min(Math.abs(wheel),4*dt);wheel-=w;v.add(new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)).multiplyScalar(w))}
-  if(meshes.length){tryMove(v);ground()}renderer.render(scene,cam)});
+  if(meshes.length&&SP){if(stuck()){stuckT+=dt;cam.position.add(v);if(stuckT>1.5){goSpawn();stuckT=0}}else{stuckT=0;tryMove(v)}ground()}renderer.render(scene,cam)});
 addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script></body></html>
