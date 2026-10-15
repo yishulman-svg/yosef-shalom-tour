@@ -1,16 +1,18 @@
 <!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <link rel="icon" href="data:,"><title>סיור בבית הכנסת יוסף שלום</title>
-<style>html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:sans-serif;touch-action:none}#hud{position:fixed;top:8px;right:8px;color:#fff;background:#0008;padding:8px 12px;border-radius:8px;font-size:14px;pointer-events:none}#joy{position:fixed;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none}#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#fff8}#tp{position:fixed;bottom:16px;right:16px;z-index:5;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:70vw}#tp button{font-size:15px;padding:8px 14px;border-radius:8px;border:0;background:#fffd;cursor:pointer}#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}</style>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:sans-serif;touch-action:none}#hud{position:fixed;top:8px;right:8px;color:#fff;background:#0008;padding:8px 12px;border-radius:8px;font-size:14px;pointer-events:none}#joy{position:fixed;left:24px;bottom:24px;width:120px;height:120px;border-radius:50%;background:#fff2;border:2px solid #fff5;display:none}#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#fff8}#tp{position:fixed;bottom:16px;right:16px;z-index:5;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:70vw}#tp button{font-size:15px;padding:8px 14px;border-radius:8px;border:0;background:#fffd;cursor:pointer}#cmp{position:fixed;top:10px;left:10px;width:64px;height:64px;border-radius:50%;background:#0008;border:2px solid #fff8;z-index:6;pointer-events:none}#rose{position:absolute;inset:0}#ndl{position:absolute;left:27px;top:17px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:24px solid #e33}#cN{position:absolute;left:0;right:0;top:1px;text-align:center;color:#fff;font:bold 13px sans-serif}#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}</style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script></head><body>
-<div id="tp"><button data-s="hall">אולם מרכזי</button><button data-s="women">עזרת נשים</button><button data-s="out">בחוץ</button><button id="reset">חזרה לכניסה</button></div>
+<div id="tp"><button data-s="hall">אולם מרכזי</button><button data-s="women">עזרת נשים</button><button data-s="out">בחוץ</button><button id="reset">חזרה לכניסה</button><button id="ov">מבט מלמעלה</button><button id="zr">איפוס זום</button></div>
 <div id="load">טוען… <span id="pct"></span></div>
-<div id="hud">גרירה: הסתכלות · WASD/חצים: הליכה · גלגלת: קדימה/אחורה · R: חזרה לכניסה<br>מעבר לעזרת נשים: מעבר בקצה הצפון-מזרחי של המחיצה, או בכפתור · יציאה: דלת היציאה השנייה<br><small>חיפוי אבן ירושלמית בקיר ארון הקודש – להמחשה</small><br>במובייל: ג'ויסטיק משמאל, גרירה להסתכלות</div>
+<div id="hud">גרירה: הסתכלות · WASD/חצים: הליכה · גלגלת: קדימה/אחורה · זום: +/- או Ctrl+גלגלת (צביטה במובייל), 0 לאיפוס · R: חזרה לכניסה<br>מעבר לעזרת נשים: מעבר בקצה הצפון-מזרחי של המחיצה, או בכפתור · יציאה: דלת היציאה השנייה<br><small>חיפוי אבן ירושלמית בקיר ארון הקודש – להמחשה</small><br>במובייל: ג'ויסטיק משמאל, גרירה להסתכלות</div>
+<div id="cmp"><div id="rose"><span id="cN">צ</span><div id="ndl"></div></div></div>
 <div id="joy"><div id="knob"></div></div>
 <script type="module">
 import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
-const T0=performance.now();const EYE=1.6,R=0.18,SPEED=2.2,GLB_BYTES=5403436;
+const T0=performance.now();const EYE=1.6,R=0.18,SPEED=2.2,GLB_BYTES=5401672;
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);
 renderer.toneMapping=THREE.AgXToneMapping;renderer.toneMappingExposure=Math.pow(2,0.2);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=false;document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xbfd4e6);
@@ -38,7 +40,7 @@ function tryMove(dx,dz,dt){const p=cam.position;
   if(canGo(p.x+dx,p.z+dz)){p.x+=dx;p.z+=dz}else if(canGo(p.x+dx,p.z))p.x+=dx;else if(canGo(p.x,p.z+dz))p.z+=dz}
 function ground(){const f=floorH(cam.position.x,cam.position.z);if(f!==null&&f>-8)cam.position.y+=(f+EYE-cam.position.y)*0.3}
 // load
-const LM=new THREE.TextureLoader().load('lightmap.webp',t=>{LMC.forEach(x=>{x.image=t.image;x.needsUpdate=true})});LM.flipY=false;LM.channel=1;LM.colorSpace=THREE.SRGBColorSpace;const LMC=[0,1,2,3].map(c=>{const t=LM.clone();t.channel=c;return t});const LM_INT=5.8107*Math.PI;
+const LM=new THREE.TextureLoader().load('lightmap.webp',t=>{LMC.forEach(x=>{x.image=t.image;x.needsUpdate=true})});LM.flipY=false;LM.channel=1;LM.colorSpace=THREE.SRGBColorSpace;const LMC=[0,1,2,3].map(c=>{const t=LM.clone();t.channel=c;return t});const LM_INT=5.8106*Math.PI;
 const dl=new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/');
 let ready=false;
 new GLTFLoader().setDRACOLoader(dl).load('synagogue.glb',async g=>{
@@ -56,18 +58,46 @@ new GLTFLoader().setDRACOLoader(dl).load('synagogue.glb',async g=>{
 },e=>{document.getElementById('pct').textContent=Math.min(99,Math.round(e.loaded/GLB_BYTES*100))+'%'});
 // look
 let drag=null;const el=renderer.domElement;
-el.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&e.clientX<innerWidth/2&&joyOn)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId)});
+el.addEventListener('pointerdown',e=>{if(overhead)return;if(e.pointerType==='touch'&&e.clientX<innerWidth/2&&joyOn)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId)});
 el.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;yaw-=(e.clientX-drag.x)*0.004;pitch-=(e.clientY-drag.y)*0.004;pitch=Math.max(-1.4,Math.min(1.4,pitch));drag.x=e.clientX;drag.y=e.clientY});
 el.addEventListener('pointerup',e=>{if(drag&&drag.id===e.pointerId)drag=null});
-const keys={};addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyR')goSpawn()});addEventListener('keyup',e=>keys[e.code]=false);
+const keys={};addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyR'&&!overhead)goSpawn()});addEventListener('keyup',e=>keys[e.code]=false);
 document.getElementById('reset').addEventListener('click',goSpawn);document.querySelectorAll('#tp button[data-s]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.s)));window.goTo=goTo;window.setPose=(x,y,z,tx,ty,tz)=>{cam.position.set(x,y,z);yaw=Math.atan2(-(tx-x),-(tz-z));pitch=Math.atan2(ty-y,Math.hypot(tx-x,tz-z))};
-let wheel=0;addEventListener('wheel',e=>{wheel+=-Math.sign(e.deltaY)*0.5;e.preventDefault()},{passive:false});
+let wheel=0;addEventListener('wheel',e=>{if(overhead)return;e.preventDefault();if(e.ctrlKey){zoomBy(e.deltaY>0?1.08:1/1.08);return}wheel+=-Math.sign(e.deltaY)*0.5},{passive:false});
+// zoom (FOV)
+const FOV0=70;function zoomBy(k){cam.fov=Math.max(20,Math.min(85,cam.fov*k));cam.updateProjectionMatrix()}function zoomReset(){cam.fov=FOV0;cam.updateProjectionMatrix()}
+addEventListener('keydown',e=>{if(overhead)return;if(e.code==='Equal'||e.code==='NumpadAdd')zoomBy(1/1.1);else if(e.code==='Minus'||e.code==='NumpadSubtract')zoomBy(1.1);else if(e.code==='Digit0'||e.code==='Numpad0')zoomReset()});
+document.getElementById('zr').addEventListener('click',zoomReset);
+const tps=new Map();let pinch0=0;
+el.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'){tps.set(e.pointerId,e);if(tps.size===2){const [a,b]=[...tps.values()];pinch0=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);drag=null}}});
+el.addEventListener('pointermove',e=>{if(!tps.has(e.pointerId))return;tps.set(e.pointerId,e);if(tps.size===2&&!overhead){const [a,b]=[...tps.values()];const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);if(pinch0>0){zoomBy(pinch0/d);pinch0=d}}});
+const tpEnd=e=>{tps.delete(e.pointerId);if(tps.size<2)pinch0=0};el.addEventListener('pointerup',tpEnd);el.addEventListener('pointercancel',tpEnd);
+// overhead view
+let overhead=false,saved=null;const ocam=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.5,500);ocam.position.set(15,40,-2);
+const orbit=new OrbitControls(ocam,el);orbit.target.set(15,0,-7);orbit.enabled=false;orbit.maxPolarAngle=Math.PI*0.45;orbit.minDistance=5;orbit.maxDistance=90;orbit.screenSpacePanning=true;
+const CLIP=[new THREE.Plane(new THREE.Vector3(0,-1,0),2.55)];const ovBtn=document.getElementById('ov');
+function setOverhead(on){overhead=on;orbit.enabled=on;renderer.clippingPlanes=on?CLIP:[];ovBtn.textContent=on?'חזרה להליכה':'מבט מלמעלה';drag=null;
+  document.getElementById('joy').style.display=(!on&&joyOn)?'block':'none';
+  if(on){saved={p:cam.position.clone(),yaw,pitch};ocam.position.set(15,38,4);orbit.target.set(15.5,0,-7);orbit.update()}
+  else if(saved){cam.position.copy(saved.p);yaw=saved.yaw;pitch=saved.pitch}}
+ovBtn.addEventListener('click',()=>setOverhead(!overhead));window.setOverhead=setOverhead;
+// click a floor spot in overhead view to walk there
+let downAt=null;el.addEventListener('pointerdown',e=>{downAt=[e.clientX,e.clientY]});
+el.addEventListener('pointerup',e=>{if(!overhead||!downAt||Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])>5||!NAV)return;
+  const rc=new THREE.Raycaster();rc.setFromCamera(new THREE.Vector2(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1),ocam);
+  const r=rc.ray;if(r.direction.y>=0)return;const t=(0-r.origin.y)/r.direction.y;const x=r.origin.x+r.direction.x*t,z=r.origin.z+r.direction.z*t;const f=floorH(x,z);
+  if(f===null||f<-8||!free(x,z))return;saved={p:new THREE.Vector3(x,f+EYE,z),yaw:saved?saved.yaw:yaw,pitch:0};setOverhead(false)});
 const joy=document.getElementById('joy'),knob=document.getElementById('knob');let joyOn=matchMedia('(pointer:coarse)').matches,jv={x:0,y:0},jid=null;
 if(joyOn)joy.style.display='block';
 joy.addEventListener('pointerdown',e=>{jid=e.pointerId;joy.setPointerCapture(jid);jmove(e)});
 joy.addEventListener('pointermove',e=>{if(e.pointerId===jid)jmove(e)});
 joy.addEventListener('pointerup',e=>{jid=null;jv={x:0,y:0};knob.style.left=knob.style.top='35px'});
 function jmove(e){const r=joy.getBoundingClientRect();let x=(e.clientX-r.left-60)/50,y=(e.clientY-r.top-60)/50;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}jv={x,y};knob.style.left=35+x*50+'px';knob.style.top=35+y*50+'px'}
+// compass: north derived from spawn->ark = bearing 135 (SE)
+const NORTH=new THREE.Vector2(0.8755,-0.4831),EAST=new THREE.Vector2(0.4831,0.8755);window.NORTH=NORTH;const rose=document.getElementById('rose');
+orbit.minPolarAngle=0.05;const _v=new THREE.Vector3();
+function compass(){let vx,vz;if(overhead){_v.subVectors(orbit.target,ocam.position);vx=_v.x;vz=_v.z}else{vx=-Math.sin(yaw);vz=-Math.cos(yaw)}
+  const b=Math.atan2(vx*EAST.x+vz*EAST.y,vx*NORTH.x+vz*NORTH.y);rose.style.transform='rotate('+(-b)+'rad)'}
 // loop
 const clock=new THREE.Clock();window.__ft=[];
 renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),0.05);cam.rotation.set(pitch,yaw,0);
@@ -75,7 +105,7 @@ renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),0.05);cam.rota
   let w=0;if(wheel){w=Math.sign(wheel)*Math.min(Math.abs(wheel),4*dt);wheel-=w}
   const fwd=f*SPEED*dt+w,side=s*SPEED*dt;
   const dx=-Math.sin(yaw)*fwd+Math.cos(yaw)*side,dz=-Math.cos(yaw)*fwd-Math.sin(yaw)*side;
-  if(NAV&&BLK){if(dx||dz)tryMove(dx,dz,dt);ground()}
-  if(ready){const t=performance.now();renderer.render(scene,cam);window.__ft.push(t);if(window.__ft.length>600)window.__ft.shift()}});
-addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+  if(NAV&&BLK&&!overhead){if(dx||dz)tryMove(dx,dz,dt);ground()}if(overhead)orbit.update();compass();
+  if(ready){const t=performance.now();renderer.render(scene,overhead?ocam:cam);window.__ft.push(t);if(window.__ft.length>600)window.__ft.shift()}});
+addEventListener('resize',()=>{cam.aspect=ocam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ocam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script></body></html>
